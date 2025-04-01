@@ -25,7 +25,12 @@ type EasyTimer struct {
 }
 
 // Stop ... stop
-// option ... -1 not stop and fast check; 0 not stop & normal check; 2 do stop; 3 do stop & timer
+// option ...
+// -1 ... not stop and fast check;
+// 0 ... not stop & normal check;
+// 2 ... do stop;
+// 3 ... do stop & timer
+// 4 ... do stop & timer
 func (et *EasyTimer) Stop(option int) (int, bool) {
 	defer et.lock.Unlock()
 	et.lock.Lock()

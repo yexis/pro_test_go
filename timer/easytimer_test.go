@@ -31,5 +31,14 @@ func TestEasyTimer(t *testing.T) {
 	}
 	fmt.Println("status:", status)
 
-	time.Sleep(10 * time.Second)
+}
+
+func TestEasyTimer2(t *testing.T) {
+	et := EasyTimer{}
+	et.Start(TimerOnlyCheck, time.Duration(5)*time.Second, EmptyEasyTimerCallback)
+
+	select {
+	case <-et.C():
+		fmt.Println("time out")
+	}
 }

@@ -14,11 +14,19 @@ const (
 	TimerStoppedByClear   = 4
 )
 
-// ReqTimerMethod ... req timer method
-type ReqTimerMethod func(rt *EasyTimer, args ...interface{}) error
+// EasyTimerCallback ... req timer method
+type EasyTimerCallback func(rt *EasyTimer, args ...interface{}) error
+
+// EmptyEasyTimerCallback ... 用于无需回调的场景
+func EmptyEasyTimerCallback(rt *EasyTimer, args ...interface{}) error {
+	return nil
+}
+
+var PureEmptyEasyTimerCallback EasyTimerCallback = nil
 
 // EasyTimer ... request timer
 type EasyTimer struct {
+	errCh  chan error
 	timer  *time.Timer
 	lock   sync.Mutex
 	status int
@@ -51,6 +59,7 @@ func (et *EasyTimer) Stop(option int) (int, bool) {
 		et.status = option
 		if et.timer != nil {
 			et.timer.Stop()
+			et.errCh <- nil
 		}
 		n = true
 	}
@@ -71,14 +80,23 @@ func (et *EasyTimer) Reset(interval time.Duration) bool {
 }
 
 // Start ... start
-func (et *EasyTimer) Start(option int, interval time.Duration, method ReqTimerMethod, args ...interface{}) {
+func (et *EasyTimer) Start(option int, interval time.Duration, method EasyTimerCallback, args ...interface{}) {
 	if stopped, _ := et.Stop(option); stopped >= TimerStopped {
 		return
 	}
 
+	et.errCh = make(chan error, 1)
 	et.timer = time.AfterFunc(interval, func() {
 		if _, curStopped := et.Stop(TimerStoppedOnTimeout); curStopped {
-			_ = method(et, args...)
+			var err error
+			if method != nil {
+				err = method(et, args...)
+			}
+			et.errCh <- err
 		}
 	})
+}
+
+func (et *EasyTimer) C() <-chan error {
+	return et.errCh
 }

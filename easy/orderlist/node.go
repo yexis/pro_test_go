@@ -1,4 +1,4 @@
-package easyorderlist
+package orderlist
 
 import (
 	"fmt"

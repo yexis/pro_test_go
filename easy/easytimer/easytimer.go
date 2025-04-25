@@ -1,4 +1,4 @@
-package timer
+package easytimer
 
 import (
 	"sync"
@@ -59,10 +59,14 @@ func (et *EasyTimer) Stop(option int) (int, bool) {
 		et.status = option
 		if et.timer != nil {
 			et.timer.Stop()
-			et.errCh <- nil
 		}
 		n = true
 	}
+
+	if option != TimerStoppedOnTimeout {
+		et.errCh <- nil
+	}
+
 	return et.status, n
 }
 

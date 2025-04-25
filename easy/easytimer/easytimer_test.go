@@ -1,4 +1,4 @@
-package timer
+package easytimer
 
 import (
 	"fmt"
@@ -30,7 +30,6 @@ func TestEasyTimer(t *testing.T) {
 		fmt.Println("curr stopped failed")
 	}
 	fmt.Println("status:", status)
-
 }
 
 func TestEasyTimer2(t *testing.T) {

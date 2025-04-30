@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"pro_test_go/easy/easylistener"
 	"time"
 )
 
@@ -12,16 +13,20 @@ const (
 	defaultNodeTimeout = 15000
 )
 
-type AllDoneCallback func(data any, params ...any) (any, error)
+type Func func(data any, params ...any) (any, error)
 type List struct {
 	ctx     context.Context
 	head    *Node
 	tail    *Node
 	count   int
-	timeout int // ms
+	timeout int  // ms
+	block   bool // whether block
+
+	eventCh  chan *easylistener.ListenEvent
+	listener *easylistener.Listeners
 
 	allDoneCh chan bool
-	callback  AllDoneCallback
+	callback  Func
 }
 
 func NewList(ctx context.Context, p ...any) *List {
@@ -50,8 +55,14 @@ func (l *List) SetTimeout(tm int) *List {
 
 // SetAllDoneCallback
 // e.g. NewList(n).SetAllDoneCallback(f)
-func (l *List) SetAllDoneCallback(cb AllDoneCallback) *List {
+func (l *List) SetAllDoneCallback(cb Func) *List {
 	l.callback = cb
+	return l
+}
+
+// SetBlock ... if err, block or not
+func (l *List) SetBlock(b bool) *List {
+	l.block = b
 	return l
 }
 
@@ -79,6 +90,8 @@ func (l *List) Append(n *Node, p ...any) *Node {
 }
 
 func (l *List) Start(data any, params ...any) {
+	l.listener = &easylistener.Listeners{}
+	l.listener.Listen(l.ctx, l.eventCh, []*easylistener.ListenerEventAction{})
 	timeout := time.After(time.Duration(l.timeout) * time.Millisecond)
 	go func() {
 		if l.head != nil {
@@ -107,4 +120,16 @@ func (l *List) Head() *Node {
 
 func (l *List) Tail() *Node {
 	return l.tail
+}
+
+func (l *List) DataHandler(data any, params ...any) {
+
+}
+
+func (l *List) ErrorHandler(data any, params ...any) {
+
+}
+
+func (l *List) EndHandler(data any, params ...any) {
+
 }

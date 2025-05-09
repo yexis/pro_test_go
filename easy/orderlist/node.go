@@ -76,7 +76,7 @@ func (n *Node) SetIndex(idx int) *Node {
 	return n
 }
 
-func (n *Node) Index() int {
+func (n *Node) GetIndex() int {
 	return n.index
 }
 
@@ -125,10 +125,10 @@ func (n *Node) AddListener(data any, params ...any) {
 	go func() {
 		select {
 		case <-n.Object.Done():
-			fmt.Printf("node[%d] receive object done\n", n.Index())
+			fmt.Printf("__node[%d]__ receive object done\n", n.GetIndex())
 			n.Done(data, params...)
 		case e := <-n.Object.Error():
-			fmt.Printf("node[%d] receive error:%s\n", n.Index(), e.Error())
+			fmt.Printf("__node[%d]__ receive error:%s\n", n.GetIndex(), e.Error())
 			n.Done(e, params...)
 		}
 	}()
@@ -145,7 +145,7 @@ func (n *Node) Done(data any, params ...any) {
 		select {
 		case <-timeout:
 			if n.allDoneCh != nil {
-				fmt.Printf("node[%d] wait next timeout\n", n.Index())
+				fmt.Printf("__node[%d]__ wait next timeout\n", n.GetIndex())
 				n.allDoneCh <- true
 				close(n.allDoneCh)
 			}
@@ -174,11 +174,14 @@ func (n *Node) notifyCanNext() {
 
 // ToNext ... move to next node
 func (n *Node) ToNext() {
-	fmt.Printf("[Node] --------------------------------------- switch node[%d] to node[%d]\n", n.Index(), n.Index()+1)
+	fmt.Printf("__Node[%d]__ switch to node[%d]\n", n.GetIndex(), n.GetIndex()+1)
 	n.next.startCh <- true
 }
 
 func (n *Node) emitEvent(key listEventType, value interface{}) {
+	if n.eventCh == nil {
+		return
+	}
 	n.eventCh.Send(&easylistener.SeniorListenersEvent[listEventType]{
 		Key:   key,
 		Value: value,

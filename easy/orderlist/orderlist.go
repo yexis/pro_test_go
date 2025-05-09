@@ -86,7 +86,7 @@ func (l *List) Append(n *Node, p ...any) *Node {
 	n.SetIndex(l.count)
 	n.SetAllDoneCh(l.allDoneCh)
 	if isLast {
-		fmt.Println("[list] receive the last node", n.Index())
+		fmt.Println("[list] receive the last node", n.GetIndex())
 		n.SetLast(true)
 	}
 

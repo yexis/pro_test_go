@@ -21,6 +21,12 @@ const (
 )
 
 const (
+	listenerStReady     = 0
+	listenerStToRelease = 1
+	listenerStReleased  = 2
+)
+
+const (
 	defaultTimeout = 300000 // ms
 )
 
@@ -88,10 +94,11 @@ func (l *Listeners) doEvent(task *decorator.Task, input interface{}, ps *decorat
 	if e != nil && a.E != nil {
 		i, e = a.E(task, e, ps, a.P...)
 	}
+	// i != nil as finished
 	if i != nil {
-		//l.End(i)
+		l.End(i)
 	} else if e != nil {
-		//l.End(e)
+		l.End(e)
 	}
 	return i, e
 }
@@ -182,12 +189,12 @@ func (l *Listeners) Listen(task *decorator.Task, input interface{}, ps *decorato
 			if a.Async {
 				go l.doEvent(task, input, ps, a)
 				if a.EndLoop {
-
+					l.Stop(ch)
 				}
 			} else {
 				go l.doEvent(task, input, ps, a)
 				if a.EndLoop {
-
+					l.Stop(ch)
 				}
 			}
 		case <-tm:
@@ -197,6 +204,21 @@ func (l *Listeners) Listen(task *decorator.Task, input interface{}, ps *decorato
 		}
 	}
 	return ret, err
+}
+
+// End ... end
+func (l *Listeners) End(data interface{}) {
+	defer l.lock.Unlock()
+	l.lock.Lock()
+	if l.status < listenerStToRelease {
+		l.status = listenerStToRelease
+	}
+	if l.ievChan != nil {
+		l.ievChan <- &listenerInternalEventAction{
+			Type: listenerIEVClose,
+			Data: data,
+		}
+	}
 }
 
 func (l *Listeners) Destroy() {
@@ -214,7 +236,11 @@ func (l *Listeners) Destroy() {
 func (l *Listeners) Stop(ch chan *ListenEvent) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
+	if l.status == listenerStReleased {
+		return
+	}
 	l.running = false
+	l.status = listenerStReleased
 	if l.ievChan != nil {
 		close(l.ievChan)
 	}

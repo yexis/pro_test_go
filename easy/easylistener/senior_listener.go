@@ -9,69 +9,59 @@ import (
 	"time"
 )
 
-// EventType ... event type
-// data, error, close, end ...
-type EventType string
+type EventTypeParser[K comparable] func(interface{}) (K, bool)
 
-func dissectEventType(d interface{}) (EventType, bool) {
-	var et EventType
-	var ok bool
-	switch v := d.(type) {
-	case EventType:
-		et = v
-		ok = true
-	case string:
-		et = EventType(v)
-		ok = true
-	}
-	return et, ok
+func TplEventTypeParser[K comparable](val interface{}) (K, bool) {
+	result, ok := val.(K)
+	return result, ok
 }
 
-// ListenersEvent ... listener event
-type ListenersEvent struct {
-	Key   EventType
+// SeniorListenersEvent ... senior listener event
+type SeniorListenersEvent[K comparable] struct {
+	Key   K
 	Value interface{}
 }
 
-type ListenersEventArgs struct {
+// SeniorListenersEventArgs ... senior listener event args
+type SeniorListenersEventArgs struct {
 	Once    bool // run once
 	Async   bool // run sync or async, not used now
 	EndLoop bool // run then end
 }
 
-type listenersEventAction struct {
+type seniorListenersEventAction[K comparable] struct {
 	decorator.Action
-	Key EventType // event key
-	ListenersEventArgs
+	Key K // event key
+	SeniorListenersEventArgs
 }
 
 // listenersInternalEventAction ... listener internal events action
-type listenersInternalEventAction struct {
+type seniorListenersInternalEventAction struct {
 	Type int
 	Data interface{}
 }
 
-// Listeners ... Listener
-type Listeners struct {
+// SeniorListeners ... senior listener
+type SeniorListeners[K comparable] struct {
 	running   bool
 	status    int
 	timeoutMs int
-	ievChan   chan *listenersInternalEventAction
+	ievChan   chan *seniorListenersInternalEventAction
 	lock      sync.Mutex
 }
 
 // SetTimeout ... set timeoutMs
-func (l *Listeners) SetTimeout(t int) *Listeners {
+func (l *SeniorListeners[K]) SetTimeout(t int) *SeniorListeners[K] {
 	l.timeoutMs = t
 	return l
 }
 
-func WrapListener(c decorator.Ctrl, event EventType, once bool, endLoop bool, async bool, params ...interface{}) *decorator.Action {
+func WrapSeniorListener[K comparable](c decorator.Ctrl, tp K, once bool, endLoop bool, async bool, params ...interface{}) *decorator.Action {
 	return &decorator.Action{
 		C: c,
 		P: append([]interface{}{
-			event,
-			&ListenersEventArgs{
+			tp,
+			&SeniorListenersEventArgs{
 				Once:    once,
 				EndLoop: endLoop,
 				Async:   async,
@@ -80,25 +70,25 @@ func WrapListener(c decorator.Ctrl, event EventType, once bool, endLoop bool, as
 	}
 }
 
-func WrapDefaultListener(c decorator.Ctrl, event EventType, params ...interface{}) *decorator.Action {
+func WrapDefaultSeniorListener[K comparable](c decorator.Ctrl, tp K, params ...interface{}) *decorator.Action {
 	return &decorator.Action{
 		C: c,
 		P: append([]interface{}{
-			event,
-			&ListenersEventArgs{},
+			tp,
+			&SeniorListenersEventArgs{},
 		}, params...),
 	}
 }
 
 // EasyListen ... easy listen
-func (l *Listeners) EasyListen(ch *EventChannel, actions []*decorator.Action) (interface{}, error) {
-	return l.Listen(nil, nil, nil, ch, actions)
+func (l *SeniorListeners[K]) EasyListen(ch *SeniorEventChannel[K], actions []*decorator.Action, parser EventTypeParser[K]) (interface{}, error) {
+	return l.Listen(nil, nil, nil, ch, actions, parser)
 }
 
 // Listen
 // ch chan *ListenersEvent: read-only?
-func (l *Listeners) Listen(task *decorator.Task, input interface{}, ps *decorator.Stage,
-	ch *EventChannel, actions []*decorator.Action) (interface{}, error) {
+func (l *SeniorListeners[K]) Listen(task *decorator.Task, input interface{}, ps *decorator.Stage,
+	ch *SeniorEventChannel[K], actions []*decorator.Action, parser EventTypeParser[K]) (interface{}, error) {
 	if len(actions) <= 0 {
 		return nil, errors.New(decorator.EM1301EmptyAction)
 	}
@@ -119,7 +109,7 @@ func (l *Listeners) Listen(task *decorator.Task, input interface{}, ps *decorato
 	}
 
 	tm := time.After(time.Duration(l.timeoutMs) * time.Millisecond)
-	mp := make(map[EventType]*listenersEventAction)
+	mp := make(map[K]*seniorListenersEventAction[K])
 	var err error
 	var ret interface{}
 	for _, action := range actions {
@@ -127,27 +117,22 @@ func (l *Listeners) Listen(task *decorator.Task, input interface{}, ps *decorato
 		if size < 2 {
 			return nil, errors.New(decorator.EM1303MissingParams)
 		}
-		var key EventType
-		var ok bool
-		key, ok = dissectEventType(action.P[0])
+		key, ok := parser(action.P[0])
 		if !ok {
 			return nil, fmt.Errorf(decorator.EM1305WrongParams, "listen action params[0]")
 		}
-		args, ok := action.P[1].(*ListenersEventArgs)
+		args, ok := action.P[1].(*SeniorListenersEventArgs)
 		if !ok {
 			return nil, fmt.Errorf(decorator.EM1305WrongParams, "listen action params[1]")
 		}
-		if key == "" {
-			continue
-		}
-		la := &listenersEventAction{
+		la := &seniorListenersEventAction[K]{
 			Action: decorator.Action{
 				C: action.C,
 				P: action.P[2:],
 				E: action.E,
 			},
-			Key:                key,
-			ListenersEventArgs: *args,
+			Key:                      key,
+			SeniorListenersEventArgs: *args,
 		}
 		mp[key] = la
 	}
@@ -159,13 +144,13 @@ func (l *Listeners) Listen(task *decorator.Task, input interface{}, ps *decorato
 				ret = iev.Data
 				l.stopListen(ch)
 			} else if iev.Type == listenerIEVRemove {
-				if et, ok := dissectEventType(iev.Data); ok {
+				if et, ok := parser(iev.Data); ok {
 					delete(mp, et)
 				}
 			} else if iev.Type == listenerIEVClear {
-				mp = map[EventType]*listenersEventAction{}
+				mp = map[K]*seniorListenersEventAction[K]{}
 			} else if iev.Type == listenerIEVDestroy {
-				mp = map[EventType]*listenersEventAction{}
+				mp = map[K]*seniorListenersEventAction[K]{}
 				l.stopListen(ch)
 			}
 		case event := <-ch.Receive():
@@ -209,7 +194,7 @@ func (l *Listeners) Listen(task *decorator.Task, input interface{}, ps *decorato
 	return ret, err
 }
 
-func (l *Listeners) Prepare() bool {
+func (l *SeniorListeners[K]) Prepare() bool {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
@@ -219,11 +204,11 @@ func (l *Listeners) Prepare() bool {
 	}
 	fmt.Println("__listeners__ prepare")
 	l.running = true
-	l.ievChan = make(chan *listenersInternalEventAction, 3)
+	l.ievChan = make(chan *seniorListenersInternalEventAction, 3)
 	return true
 }
 
-func (l *Listeners) Destroy() {
+func (l *SeniorListeners[K]) Destroy() {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
@@ -236,7 +221,7 @@ func (l *Listeners) Destroy() {
 	}
 	fmt.Println("__listeners__ destroy")
 	if l.ievChan != nil {
-		l.ievChan <- &listenersInternalEventAction{
+		l.ievChan <- &seniorListenersInternalEventAction{
 			Type: listenerIEVDestroy,
 			Data: nil,
 		}
@@ -244,7 +229,7 @@ func (l *Listeners) Destroy() {
 }
 
 // end ... end
-func (l *Listeners) end(data interface{}) {
+func (l *SeniorListeners[K]) end(data interface{}) {
 	defer l.lock.Unlock()
 	l.lock.Lock()
 	if l.status == listenerStReleased {
@@ -256,15 +241,15 @@ func (l *Listeners) end(data interface{}) {
 		l.status = listenerStToRelease
 	}
 	if l.ievChan != nil {
-		l.ievChan <- &listenersInternalEventAction{
+		l.ievChan <- &seniorListenersInternalEventAction{
 			Type: listenerIEVClose,
 			Data: data,
 		}
 	}
 }
 
-func (l *Listeners) doEvent(task *decorator.Task, input interface{}, ps *decorator.Stage,
-	a *listenersEventAction) (interface{}, error) {
+func (l *SeniorListeners[K]) doEvent(task *decorator.Task, input interface{}, ps *decorator.Stage,
+	a *seniorListenersEventAction[K]) (interface{}, error) {
 	i, e := a.C(task, input, ps, a.P...)
 	if e != nil && a.E != nil {
 		i, e = a.E(task, e, ps, a.P...)
@@ -278,7 +263,7 @@ func (l *Listeners) doEvent(task *decorator.Task, input interface{}, ps *decorat
 	return i, e
 }
 
-func (l *Listeners) stopListen(ch *EventChannel) {
+func (l *SeniorListeners[K]) stopListen(ch *SeniorEventChannel[K]) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 	if l.status == listenerStReleased {

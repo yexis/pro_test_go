@@ -1,4 +1,4 @@
-package channel
+package easychannel
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ func TestSeniorSafeChannel(t *testing.T) {
 	go func() {
 		for i := 0; i < 10; i++ {
 			if !ch.IsClosed() {
-				ch.DataCh <- i
+				ch.DataChan <- i
 				fmt.Println("write chan success", i)
 			} else {
 				fmt.Println("write chan failed", i)
@@ -26,7 +26,7 @@ func TestSeniorSafeChannel(t *testing.T) {
 		run := true
 		for run {
 			select {
-			case v, ok := <-ch.DataCh:
+			case v, ok := <-ch.DataChan:
 				if ok {
 					fmt.Println("read chan success", v)
 				} else {

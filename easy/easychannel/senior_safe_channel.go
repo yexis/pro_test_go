@@ -1,9 +1,15 @@
-package channel
+package easychannel
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
+// SeniorSafeChannel ...
+// safe channel that supports close check
+// and do not close data-chan outside even thought it is exported
 type SeniorSafeChannel[T any] struct {
-	DataCh    chan T       // 用于传递监听事件的通道
+	DataChan  chan T       // 用于传递监听事件的通道
 	isClosed  bool         // 表示通道是否已关闭的标志
 	needClear bool         // 关闭后是否需要清空
 	lock      sync.RWMutex // 用于同步访问的读写锁
@@ -14,7 +20,7 @@ func NewSeniorSafeChannel[T any](sz int) *SeniorSafeChannel[T] {
 		sz = 0
 	}
 	return &SeniorSafeChannel[T]{
-		DataCh: make(chan T, sz),
+		DataChan: make(chan T, sz),
 	}
 }
 
@@ -29,11 +35,17 @@ func (sch *SeniorSafeChannel[T]) Close() {
 	if sch.isClosed {
 		return
 	}
-	close(sch.DataCh)
-	sch.isClosed = true
+	fmt.Println("__senior_safe_channel__ close")
 	if sch.needClear {
-		for _, ok := <-sch.DataCh; ok; {
-			_, ok = <-sch.DataCh
+		for {
+			select {
+			case <-sch.DataChan:
+				// discard
+			default:
+				close(sch.DataChan)
+				sch.isClosed = true
+				return
+			}
 		}
 	}
 }
@@ -42,4 +54,18 @@ func (sch *SeniorSafeChannel[T]) IsClosed() bool {
 	sch.lock.RLock()
 	defer sch.lock.RUnlock()
 	return sch.isClosed
+}
+
+func (sch *SeniorSafeChannel[T]) Send(data T) bool {
+	sch.lock.RLock()
+	defer sch.lock.RUnlock()
+	if sch.isClosed {
+		return false
+	}
+	sch.DataChan <- data
+	return true
+}
+
+func (sch *SeniorSafeChannel[T]) Receive() <-chan T {
+	return sch.DataChan
 }

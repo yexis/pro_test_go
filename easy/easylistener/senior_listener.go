@@ -11,6 +11,7 @@ import (
 
 type EventTypeParser[K comparable] func(interface{}) (K, bool)
 
+// TplEventTypeParser ... event type parser template, instantiate it
 func TplEventTypeParser[K comparable](val interface{}) (K, bool) {
 	result, ok := val.(K)
 	return result, ok

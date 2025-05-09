@@ -2,6 +2,7 @@ package orderlist
 
 import (
 	"fmt"
+	"pro_test_go/easy/easylistener"
 	"time"
 )
 
@@ -25,6 +26,8 @@ type Node struct {
 	timeout int // ms
 	// the callback after node done
 	doneCallback Func
+	// report event channel
+	eventCh *easylistener.SeniorEventChannel[listEventType]
 }
 
 func NewNode(o Object, p ...any) *Node {
@@ -173,4 +176,11 @@ func (n *Node) notifyCanNext() {
 func (n *Node) ToNext() {
 	fmt.Printf("[Node] --------------------------------------- switch node[%d] to node[%d]\n", n.Index(), n.Index()+1)
 	n.next.startCh <- true
+}
+
+func (n *Node) emit(key listEventType, value interface{}) {
+	n.eventCh.Send(&easylistener.SeniorListenersEvent[listEventType]{
+		Key:   key,
+		Value: value,
+	})
 }

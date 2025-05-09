@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"pro_test_go/decorator"
 	"pro_test_go/easy/easylistener"
 	"time"
 )
@@ -11,6 +12,14 @@ import (
 const (
 	defaultListTimeout = 300000
 	defaultNodeTimeout = 15000
+)
+
+type listEventType int
+
+const (
+	DataType listEventType = iota
+	ErrorType
+	EndType
 )
 
 type Func func(data any, params ...any) (any, error)
@@ -22,11 +31,10 @@ type List struct {
 	timeout int  // ms
 	block   bool // whether block
 
-	eventCh  chan *easylistener.ListenEvent
-	listener *easylistener.Listeners
-
 	allDoneCh chan bool
 	callback  Func
+
+	listener *easylistener.SeniorListeners[listEventType]
 }
 
 func NewList(ctx context.Context, p ...any) *List {
@@ -90,8 +98,16 @@ func (l *List) Append(n *Node, p ...any) *Node {
 }
 
 func (l *List) Start(data any, params ...any) {
-	l.listener = &easylistener.Listeners{}
-	l.listener.Listen(l.ctx, l.eventCh, []*easylistener.ListenerEventAction{})
+	eventCh := easylistener.NewSeniorEventChannel[listEventType](3)
+	l.listener = easylistener.NewSeniorListeners(easylistener.TplEventTypeParser[listEventType])
+	go func() {
+		_, _ = l.listener.EasyListen(eventCh, []*decorator.Action{
+			easylistener.WrapSeniorListener(nil, DataType, false, false, false),
+			easylistener.WrapSeniorListener(nil, ErrorType, false, false, false),
+			easylistener.WrapSeniorListener(nil, EndType, false, false, false),
+		})
+	}()
+
 	timeout := time.After(time.Duration(l.timeout) * time.Millisecond)
 	go func() {
 		if l.head != nil {
@@ -122,14 +138,14 @@ func (l *List) Tail() *Node {
 	return l.tail
 }
 
-func (l *List) DataHandler(data any, params ...any) {
+func (l *List) DataHandler(task *decorator.Task, input interface{}, stage *decorator.Stage, params ...interface{}) {
 
 }
 
-func (l *List) ErrorHandler(data any, params ...any) {
+func (l *List) ErrorHandler(task *decorator.Task, input interface{}, stage *decorator.Stage, params ...interface{}) {
 
 }
 
-func (l *List) EndHandler(data any, params ...any) {
+func (l *List) EndHandler(task *decorator.Task, input interface{}, stage *decorator.Stage, params ...interface{}) {
 
 }

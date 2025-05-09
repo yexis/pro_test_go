@@ -178,7 +178,7 @@ func (n *Node) ToNext() {
 	n.next.startCh <- true
 }
 
-func (n *Node) emit(key listEventType, value interface{}) {
+func (n *Node) emitEvent(key listEventType, value interface{}) {
 	n.eventCh.Send(&easylistener.SeniorListenersEvent[listEventType]{
 		Key:   key,
 		Value: value,

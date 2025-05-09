@@ -36,7 +36,10 @@ func seniorCloseHandler(task *decorator.Task, input interface{}, stage *decorato
 func TestSeniorListenerEasyListen(t *testing.T) {
 	eventChan := NewSeniorEventChannel[MyEventType](5)
 	l := &SeniorListeners[MyEventType]{}
+	l.EvtParser = TplEventTypeParser[MyEventType]
 	l.SetTimeout(30000)
+	// or use this way
+	// l := NewSeniorListeners(TplEventTypeParser[MyEventType]).SetTimeout(30000)
 	go func() {
 		_, err := l.EasyListen(
 			eventChan,
@@ -45,7 +48,6 @@ func TestSeniorListenerEasyListen(t *testing.T) {
 				WrapSeniorListener(seniorErrorHandler, ErrorEventType, true, false, false),
 				WrapSeniorListener(seniorCloseHandler, CloseEventType, true, false, false),
 			},
-			TplEventTypeParser[MyEventType],
 		)
 		if err != nil {
 			fmt.Println("listen err", err.Error())

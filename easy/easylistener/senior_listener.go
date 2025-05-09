@@ -48,6 +48,15 @@ type SeniorListeners[K comparable] struct {
 	timeoutMs int
 	ievChan   chan *seniorListenersInternalEventAction
 	lock      sync.Mutex
+
+	// event type parser
+	EvtParser EventTypeParser[K]
+}
+
+func NewSeniorListeners[K comparable](parser EventTypeParser[K]) *SeniorListeners[K] {
+	return &SeniorListeners[K]{
+		EvtParser: parser,
+	}
 }
 
 // SetTimeout ... set timeoutMs
@@ -81,16 +90,19 @@ func WrapDefaultSeniorListener[K comparable](c decorator.Ctrl, tp K, params ...i
 }
 
 // EasyListen ... easy listen
-func (l *SeniorListeners[K]) EasyListen(ch *SeniorEventChannel[K], actions []*decorator.Action, parser EventTypeParser[K]) (interface{}, error) {
-	return l.Listen(nil, nil, nil, ch, actions, parser)
+func (l *SeniorListeners[K]) EasyListen(ch *SeniorEventChannel[K], actions []*decorator.Action) (interface{}, error) {
+	return l.Listen(nil, nil, nil, ch, actions)
 }
 
 // Listen
 // ch chan *ListenersEvent: read-only?
 func (l *SeniorListeners[K]) Listen(task *decorator.Task, input interface{}, ps *decorator.Stage,
-	ch *SeniorEventChannel[K], actions []*decorator.Action, parser EventTypeParser[K]) (interface{}, error) {
+	ch *SeniorEventChannel[K], actions []*decorator.Action) (interface{}, error) {
 	if len(actions) <= 0 {
 		return nil, errors.New(decorator.EM1301EmptyAction)
+	}
+	if l.EvtParser == nil {
+		return nil, errors.New("parser is empty")
 	}
 	if !l.Prepare() {
 		return nil, errors.New("prepare failed")
@@ -117,7 +129,7 @@ func (l *SeniorListeners[K]) Listen(task *decorator.Task, input interface{}, ps 
 		if size < 2 {
 			return nil, errors.New(decorator.EM1303MissingParams)
 		}
-		key, ok := parser(action.P[0])
+		key, ok := l.EvtParser(action.P[0])
 		if !ok {
 			return nil, fmt.Errorf(decorator.EM1305WrongParams, "listen action params[0]")
 		}
@@ -144,7 +156,7 @@ func (l *SeniorListeners[K]) Listen(task *decorator.Task, input interface{}, ps 
 				ret = iev.Data
 				l.stopListen(ch)
 			} else if iev.Type == listenerIEVRemove {
-				if et, ok := parser(iev.Data); ok {
+				if et, ok := l.EvtParser(iev.Data); ok {
 					delete(mp, et)
 				}
 			} else if iev.Type == listenerIEVClear {

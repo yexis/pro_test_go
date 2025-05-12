@@ -99,7 +99,7 @@ func (l *List) Append(n *Node, p ...any) *Node {
 
 func (l *List) Start(data any, params ...any) {
 	eventCh := easylistener.NewSeniorEventChannel[listEventType](3)
-	l.listener = easylistener.NewSeniorListeners(easylistener.TplEventTypeParser[listEventType])
+	l.listener = easylistener.NewSeniorListeners[listEventType]()
 	go func() {
 		_, _ = l.listener.EasyListen(eventCh, []*decorator.Action{
 			easylistener.WrapSeniorListener(nil, DataType, false, false, false),

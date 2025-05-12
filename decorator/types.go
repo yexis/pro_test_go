@@ -6,11 +6,11 @@ import (
 
 // ErrorMessage ... error message
 const (
-	EM1301EmptyAction   = "Empty actions"
-	EM1302NotAction     = "Type not action"
-	EM1303MissingParams = "Missing params"
-	EM1304WaitTimeout   = "Waiting timeout after %s"
-	EM1305WrongParams   = "Wrong params as %s"
+	EM1301EmptyAction   = "empty actions"
+	EM1302NotAction     = "type not action"
+	EM1303MissingParams = "missing params"
+	EM1304WaitTimeout   = "waiting timeout after %s"
+	EM1305WrongParams   = "wrong params as %s"
 )
 
 // #region type

@@ -54,9 +54,9 @@ type SeniorListeners[K comparable] struct {
 	EvtParser EventTypeParser[K]
 }
 
-func NewSeniorListeners[K comparable](parser EventTypeParser[K]) *SeniorListeners[K] {
+func NewSeniorListeners[K comparable]() *SeniorListeners[K] {
 	return &SeniorListeners[K]{
-		EvtParser: parser,
+		EvtParser: TplEventTypeParser[K],
 	}
 }
 

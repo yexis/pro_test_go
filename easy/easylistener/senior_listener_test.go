@@ -39,7 +39,7 @@ func TestSeniorListenerEasyListen(t *testing.T) {
 	l.EvtParser = TplEventTypeParser[MyEventType]
 	l.SetTimeout(30000)
 	// or use this way
-	// l := NewSeniorListeners(TplEventTypeParser[MyEventType]).SetTimeout(30000)
+	// l := NewSeniorListeners[MyEventType]().SetTimeout(30000)
 	go func() {
 		_, err := l.EasyListen(
 			eventChan,

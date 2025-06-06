@@ -1,0 +1,7 @@
+
+[2025-05-26 15:20:34.240] [DEBUG] trace_logger.go:205 logid:123 __pointer__ pa:<nil>
+[2025-05-26 15:20:34.240] [DEBUG] trace_logger.go:205 logid:123 __pointer__ pa2:<nil>
+[2025-05-26 15:20:34.240] [DEBUG] trace_logger.go:205 logid:123 __pointer__ ps:0x140001da470
+[2025-05-26 15:21:22.659] [DEBUG] trace_logger.go:205 logid:123 __pointer__ pa:&{id:1 val:lgy}
+[2025-05-26 15:21:22.659] [DEBUG] trace_logger.go:205 logid:123 __pointer__ pa2:<nil>
+[2025-05-26 15:21:22.659] [DEBUG] trace_logger.go:205 logid:123 __pointer__ ps:0x140001da470

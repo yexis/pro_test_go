@@ -1,6 +1,8 @@
 package orderlist
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"pro_test_go/easy/easylistener"
 	"time"
@@ -14,23 +16,23 @@ type Object interface {
 
 type Node struct {
 	Object
+	ctx   context.Context
 	index int
-	next  *Node
 	last  bool
+	next  *Node
 
-	nextCh    chan bool
-	startCh   chan bool
-	allDoneCh chan bool
+	nextArrivedCh chan bool
+	startCh       chan bool
 
-	// the timeout to wait next node
-	timeout int // ms
+	// the waitNextTimeout to wait next node
+	waitNextTimeout int // ms
 	// the callback after node done
 	doneCallback Func
 	// report event channel
 	eventCh *easylistener.SeniorEventChannel[listEventType]
 }
 
-func NewNode(o Object, p ...any) *Node {
+func NewNode(ctx context.Context, o Object, p ...any) *Node {
 	last := false
 	if len(p) > 0 {
 		if v, ok := p[0].(bool); ok {
@@ -38,21 +40,22 @@ func NewNode(o Object, p ...any) *Node {
 		}
 	}
 	n := &Node{
-		Object:  o,
-		next:    nil,
-		nextCh:  make(chan bool),
-		startCh: make(chan bool),
-		last:    last,
-		timeout: defaultNodeTimeout,
+		ctx:             ctx,
+		Object:          o,
+		next:            nil,
+		nextArrivedCh:   make(chan bool),
+		startCh:         make(chan bool),
+		last:            last,
+		waitNextTimeout: defaultNodeTimeout,
 	}
 	if last {
-		n.notifyCanNext()
+		n.notifyNextArrived()
 	}
 	return n
 }
 
 func (n *Node) SetTimeout(tm int) *Node {
-	n.timeout = tm
+	n.waitNextTimeout = tm
 	return n
 }
 
@@ -63,11 +66,6 @@ func (n *Node) SetLast(b bool) *Node {
 
 func (n *Node) SetDoneCallback(cb Func) *Node {
 	n.doneCallback = cb
-	return n
-}
-
-func (n *Node) SetAllDoneCh(ch chan bool) *Node {
-	n.allDoneCh = ch
 	return n
 }
 
@@ -90,7 +88,7 @@ func (n *Node) Append(np *Node) *Node {
 	n.next = np
 	// tell to next node arrived
 	if np != nil {
-		n.notifyCanNext()
+		n.notifyNextArrived()
 	}
 	return n.next
 }
@@ -124,6 +122,9 @@ func (n *Node) AddListener(data any, params ...any) {
 
 	go func() {
 		select {
+		case <-n.ctx.Done():
+			fmt.Printf("__node[%d]__ ctx done and exit before object done\n", n.GetIndex())
+			break
 		case <-n.Object.Done():
 			fmt.Printf("__node[%d]__ receive object done\n", n.GetIndex())
 			n.Done(data, params...)
@@ -139,42 +140,39 @@ func (n *Node) Done(data any, params ...any) {
 		_, _ = n.doneCallback(data, params...)
 	}
 
-	timeout := time.After(time.Duration(n.timeout) * time.Millisecond)
-	ct := true
-	for ct {
-		select {
-		case <-timeout:
-			if n.allDoneCh != nil {
-				fmt.Printf("__node[%d]__ wait next timeout\n", n.GetIndex())
-				n.allDoneCh <- true
-				close(n.allDoneCh)
-			}
-			ct = false
-		case <-n.nextCh:
-			if n.next != nil {
-				n.ToNext()
-				ct = false
-				break
-			}
-			if n.last {
-				if n.allDoneCh != nil {
-					n.allDoneCh <- true
-					close(n.allDoneCh)
-				}
-				ct = false
-			}
+	// next arrived timeout
+	dur := time.Duration(n.waitNextTimeout)
+	C := time.After(dur * time.Millisecond)
+
+	select {
+	case <-n.ctx.Done():
+		fmt.Printf("__node[%d]__ ctx done when wait next node\n", n.GetIndex())
+		n.emitEvent(ErrorType, errors.New("ctx done when wait next node"))
+
+	case <-C:
+		fmt.Printf("__node[%d]__ timeout when wait next node\n", n.GetIndex())
+		n.emitEvent(ErrorType, errors.New("timeout when wait next node"))
+
+	case <-n.nextArrivedCh:
+		if n.next != nil {
+			n.toNext()
+			break
+		}
+		if n.last {
+			n.emitEvent(EndType, nil)
 		}
 	}
+
 }
 
-// notifyCanNext ... next node arrive
-func (n *Node) notifyCanNext() {
-	close(n.nextCh)
+// notifyNextArrived ... next node arrived
+func (n *Node) notifyNextArrived() {
+	close(n.nextArrivedCh)
 }
 
-// ToNext ... move to next node
-func (n *Node) ToNext() {
-	fmt.Printf("__Node[%d]__ switch to node[%d]\n", n.GetIndex(), n.GetIndex()+1)
+// toNext ... move to next node
+func (n *Node) toNext() {
+	fmt.Printf("__node[%d]__ switch to node[%d]\n", n.GetIndex(), n.GetIndex()+1)
 	n.next.startCh <- true
 }
 

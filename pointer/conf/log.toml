@@ -1,0 +1,55 @@
+name = "agent"
+rotateunit = "h"
+rotatecount = 168
+level = "debug"
+format = "[%D %T] [%L] %f %M"
+stdout = false
+path = "./log"
+
+#可选
+replacer = "_"
+defaulthttpreqlog = true
+
+[[writer]]
+name = "monitor"
+rotateunit = "h"
+rotatecount = 168
+level = "trace"
+format = "[%D %T] [%L] %f %M"
+# 日志分隔符
+separator = ":"
+stdout = false
+path = "./log"
+
+[[writer]]
+name = "trace"
+rotateunit = "h"
+rotatecount = 168
+level = "trace"
+format = "[%D %T] [%L] %f %M"
+# 日志分隔符
+separator = ":"
+stdout = false
+path = "./log"
+
+[[writer]]
+name = "agent_client"
+rotateunit = "h"
+rotatecount = 168
+level = "debug"
+format = "[%D %T] [%L] %M"
+# 日志分隔符
+separator = ":"
+stdout = false
+path = "./log"
+
+[[writer]]
+name = "us_client"
+rotateunit = "h"
+rotatecount = 168
+level = "info"
+format = "[%D %T] [%L] %M"
+# 日志分隔符
+separator = ":"
+stdout = false
+path = "./log"

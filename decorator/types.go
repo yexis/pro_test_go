@@ -63,4 +63,18 @@ type Selection struct {
 	Data  interface{}
 }
 
+// Triad ... triple
+type Triad struct {
+	task  *Task
+	input interface{}
+	stage *Stage
+}
+
+func (tr *Triad) Set(t *Task, i interface{}, s *Stage) *Triad {
+	tr.task = t
+	tr.input = i
+	tr.stage = s
+	return tr
+}
+
 // #endregion

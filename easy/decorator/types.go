@@ -58,11 +58,12 @@ type Action struct {
 	E Ctrl
 }
 
-func (a *Action) Do(task *Task, input interface{}, stage *Stage) (interface{}, error) {
+func (a *Action) Do(task *Task, input interface{}, stage *Stage, params ...interface{}) (interface{}, error) {
+	p := append(params, a.P...)
 	if a.C != nil {
-		i, e := a.C(task, input, stage, a.P...)
+		i, e := a.C(task, input, stage, p)
 		if e != nil && a.E != nil {
-			i, e = a.E(task, input, stage, a.P...)
+			i, e = a.E(task, input, stage, p)
 		}
 		return i, e
 	}

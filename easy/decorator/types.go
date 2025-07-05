@@ -2,6 +2,7 @@ package decorator
 
 import (
 	"context"
+	"errors"
 )
 
 // ErrorMessage ... error message
@@ -55,6 +56,17 @@ type Action struct {
 	C Ctrl
 	P []interface{}
 	E Ctrl
+}
+
+func (a *Action) Do(task *Task, input interface{}, stage *Stage) (interface{}, error) {
+	if a.C != nil {
+		i, e := a.C(task, input, stage, a.P...)
+		if e != nil && a.E != nil {
+			i, e = a.E(task, input, stage, a.P...)
+		}
+		return i, e
+	}
+	return nil, errors.New("C is nil")
 }
 
 // Selection ... selection

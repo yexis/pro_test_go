@@ -1,6 +1,6 @@
 package easylistener
 
-import "pro_test_go/easy/easychannel"
+import "github.com/yexis/pro_test_go/easy/easychannel"
 
 type SeniorEventChannel[K comparable] struct {
 	easychannel.SeniorSafeChannel[*SeniorListenersEvent[K]]

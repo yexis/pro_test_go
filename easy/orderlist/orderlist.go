@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"pro_test_go/easy/decorator"
-	"pro_test_go/easy/easylistener"
+	"github.com/yexis/pro_test_go/easy/decorator"
+	"github.com/yexis/pro_test_go/easy/easylistener"
 	"time"
 )
 

@@ -3,7 +3,7 @@ package easylistener
 import (
 	"errors"
 	"fmt"
-	"pro_test_go/decorator"
+	"pro_test_go/easy/decorator"
 	"testing"
 	"time"
 )

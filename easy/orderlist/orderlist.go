@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"pro_test_go/decorator"
+	"pro_test_go/easy/decorator"
 	"pro_test_go/easy/easylistener"
 	"time"
 )

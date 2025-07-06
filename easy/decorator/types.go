@@ -51,6 +51,8 @@ func (s *Stage) Next(task *Task, input interface{}, stage *Stage) (interface{}, 
 // Ctrl ... func pointer
 type Ctrl func(task *Task, input interface{}, stage *Stage, params ...interface{}) (interface{}, error)
 
+type NoStageCtrl func(task *Task, input interface{}, params ...interface{}) (interface{}, error)
+
 // Action ... single step or step groups
 type Action struct {
 	C Ctrl

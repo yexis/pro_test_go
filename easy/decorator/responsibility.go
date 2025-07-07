@@ -31,6 +31,7 @@ func (c *ResponsibilityContext) Next(task *Task, input interface{}, stage *Stage
 }
 
 func (c *ResponsibilityContext) Abort(task *Task, input interface{}, stage *Stage, params ...interface{}) (interface{}, error) {
+	c.index = len(c.handlers)
 	return input, c.Err
 }
 

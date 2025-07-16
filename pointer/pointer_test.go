@@ -1,7 +1,7 @@
 package pointer
 
 import (
-	"bytes"
+	"fmt"
 	logger "icode.baidu.com/baidu/duer/go-utils/trlogger"
 	"testing"
 	"time"
@@ -27,6 +27,18 @@ func TestPointer(t *testing.T) {
 	ps := &s
 	lg.Debug("__pointer__ ps:%+v", ps)
 
-	bytes.Buffer{}
 	time.Sleep(5 * time.Second)
+}
+
+func TestNilPointerButHaveType(t *testing.T) {
+	type Str struct {
+		v int
+	}
+	var i interface{} = (*Str)(nil)
+
+	if v, ok := i.(*Str); ok {
+		fmt.Println("assert success", v)
+	} else {
+		fmt.Println("assert failed", v)
+	}
 }

@@ -42,3 +42,14 @@ func TestNilPointerButHaveType(t *testing.T) {
 		fmt.Println("assert failed", v)
 	}
 }
+
+func TestPrintPointer(t *testing.T) {
+	a := 10
+	p := &a
+	q := &a
+	r := &a
+	fmt.Printf("p: %p\n", p)
+	fmt.Printf("q: %p\n", q)
+	fmt.Printf("r: %p\n", r)
+
+}

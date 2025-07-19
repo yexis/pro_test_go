@@ -32,7 +32,7 @@ type EasyTimer struct {
 	status int
 }
 
-// Stop ... stop
+// Stop ... (status, currStopped)
 // option ...
 // -1 ... not stop and fast check;
 // 0 ... not stop & normal check;

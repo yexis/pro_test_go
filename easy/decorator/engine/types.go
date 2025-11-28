@@ -1,4 +1,4 @@
-package decorator
+package engine
 
 import (
 	"context"
@@ -25,8 +25,9 @@ type Void struct{}
 
 // Task ... context for single request
 type Task struct {
-	Context context.Context
-	Content interface{}
+	Context      context.Context
+	Content      interface{}
+	innerContext Context
 }
 
 // Stage ... current stage of process
@@ -53,6 +54,12 @@ type Ctrl func(task *Task, input interface{}, stage *Stage, params ...interface{
 
 type NoStageCtrl func(task *Task, input interface{}, params ...interface{}) (interface{}, error)
 
+type ActionLike interface {
+	Base(i int, n string)
+	Params() []interface{}
+	Do(task *Task, input interface{}, stage *Stage, params ...interface{}) (interface{}, error)
+}
+
 // Action ... single step or step groups
 type Action struct {
 	C Ctrl
@@ -63,14 +70,20 @@ type Action struct {
 func (a *Action) Do(task *Task, input interface{}, stage *Stage, params ...interface{}) (interface{}, error) {
 	p := append(params, a.P...)
 	if a.C != nil {
-		i, e := a.C(task, input, stage, p)
+		i, e := a.C(task, input, stage, p...)
 		if e != nil && a.E != nil {
-			i, e = a.E(task, input, stage, p)
+			i, e = a.E(task, input, stage, p...)
 		}
 		return i, e
 	}
 	return nil, errors.New("C is nil")
 }
+
+func (a *Action) Params() []interface{} {
+	return a.P
+}
+
+//func (a *Action) Base(i int, n string) {}
 
 // Selection ... selection
 type Selection struct {
@@ -93,3 +106,20 @@ func (tr *Triad) Set(t *Task, i interface{}, s *Stage) *Triad {
 }
 
 // #endregion
+
+type CanWait interface {
+	SetNeedWait(bool)
+	NeedWait() bool
+}
+
+type Waiter struct {
+	nw bool
+}
+
+func (w *Waiter) SetNeedWait(needWait bool) {
+	w.nw = needWait
+}
+
+func (w *Waiter) NeedWait() bool {
+	return w.nw
+}

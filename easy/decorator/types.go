@@ -1,12 +1,13 @@
 package engine
 
 import (
+	"context"
 	"errors"
 )
 
 // ErrorMessage ... error message
 const (
-	EM1301EmptyAction   = "empty cases"
+	EM1301EmptyAction   = "empty actions"
 	EM1302NotAction     = "type not action"
 	EM1303MissingParams = "missing params"
 	EM1304WaitTimeout   = "waiting timeout after %s"
@@ -24,8 +25,9 @@ type Void struct{}
 
 // Task ... context for single request
 type Task struct {
-	Context *Context
-	Content interface{}
+	Context      context.Context
+	Content      interface{}
+	innerContext *Context
 }
 
 // Stage ... current stage of process
@@ -52,6 +54,12 @@ type Ctrl func(task *Task, input interface{}, stage *Stage, params ...interface{
 
 type NoStageCtrl func(task *Task, input interface{}, params ...interface{}) (interface{}, error)
 
+type ActionLike interface {
+	Base(i int, n string)
+	//Params() []interface{}
+	Do(task *Task, input interface{}, stage *Stage, params ...interface{}) (interface{}, error)
+}
+
 // Action ... single step or step groups
 type Action struct {
 	C Ctrl
@@ -66,13 +74,12 @@ func (a *Action) Do(task *Task, input interface{}, stage *Stage, params ...inter
 		if e != nil && a.E != nil {
 			i, e = a.E(task, input, stage, p...)
 		}
-		// 任何算子最终仍返回 error，则写入全局 shared error，用于停止整张图
-		if e != nil && task != nil && task.Context != nil {
-			task.Context.SetErr(e)
+		if e != nil && task != nil && task.innerContext != nil {
+			task.innerContext.SetError(e)
 		}
 		return i, e
 	}
-	return nil, errors.New("c is nil")
+	return nil, errors.New("C is nil")
 }
 
 func (a *Action) Params() []interface{} {
@@ -85,16 +92,6 @@ func (a *Action) Params() []interface{} {
 type Selection struct {
 	Index int
 	Data  interface{}
-}
-
-// SerialStop 用于在 SerialJob 内主动中断后续 action（非 error）
-// action 返回 *SerialStop 后，SerialJob 将立即停止并把 Result 作为本组输出返回
-type SerialStop struct {
-	Result interface{}
-}
-
-func StopSerial(result interface{}) *SerialStop {
-	return &SerialStop{Result: result}
 }
 
 // Triad ... triple
